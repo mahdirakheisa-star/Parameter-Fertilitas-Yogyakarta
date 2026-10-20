@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estimasi Fertilitas dari Data Registrasi Penduduk</title>
+<style>
+:root{
+  --bg:#f3f6f4; --surface:#ffffff; --ink:#18302b; --muted:#587068; --line:#cfdad5;
+  --direct:#b4572f; --indirect:#1f6f63; --ref:#2b2b2b; --warn:#a33a2c;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#10201d; --surface:#17302b; --ink:#e6f0ec; --muted:#9bb5ac; --line:#2c4a43;
+  --direct:#e08a5f; --indirect:#5cc2b0; --ref:#e6f0ec; --warn:#ff9a8a; color-scheme:dark;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Georgia,"Times New Roman",serif}
+main{max-width:1000px;margin:0 auto;padding:28px 18px 60px}
+h1{font-size:1.9rem;line-height:1.2;margin:0 0 6px}
+h2{font-size:1.2rem;margin:34px 0 10px}
+p.lead{color:var(--muted);margin:0 0 6px;max-width:68ch}
+section{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px 18px;margin-top:14px}
+label{display:block;font:600 .85rem system-ui,sans-serif;color:var(--muted);margin-bottom:3px}
+input{font:inherit;font-family:system-ui,sans-serif;font-size:.92rem;width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink)}
+input:focus-visible,button:focus-visible{outline:2px solid var(--indirect);outline-offset:1px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font:.9rem system-ui,sans-serif}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--muted);font-weight:600}
+td input{text-align:right;min-width:80px}
+td.name input{text-align:left;min-width:130px}
+.sum td{font-weight:700;border-top:2px solid var(--line)}
+button{font:600 .88rem system-ui,sans-serif;padding:7px 12px;border:1px solid var(--indirect);background:transparent;color:var(--indirect);border-radius:4px;cursor:pointer}
+button:hover{background:var(--indirect);color:var(--surface)}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.kpi{display:flex;gap:24px;flex-wrap:wrap}
+.kpi div{min-width:130px}
+.kpi b{display:block;font-size:1.6rem}
+.kpi span{font:.82rem system-ui,sans-serif;color:var(--muted)}
+.bars{margin-top:8px;position:relative}
+.bar{display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;margin:5px 0;font:.82rem system-ui,sans-serif}
+.track{position:relative;height:22px}
+.track i{position:absolute;left:0;height:10px;border-radius:2px;display:block}
+.track i.d{top:0;background:var(--direct)}
+.track i.n{top:11px;background:var(--indirect)}
+.refline{position:absolute;top:0;bottom:0;border-left:2px dashed var(--ref)}
+.legend{font:.82rem system-ui,sans-serif;color:var(--muted);margin-top:8px}
+.legend s{display:inline-block;width:12px;height:10px;margin:0 4px 0 12px;text-decoration:none}
+.low{color:var(--warn)}
+.note{font:.86rem/1.5 system-ui,sans-serif;color:var(--muted);max-width:80ch}
+code{font-family:ui-monospace,Consolas,monospace;font-size:.85em}
+</style>
+</head>
+<body>
+<main>
+<h1>Estimasi Parameter Fertilitas dari Data Registrasi Penduduk Yogyakarta</h1>
+
+<h2>1. Parameter tabel kematian</h2>
+<section>
+  <div class="grid">
+    <div><label for="e0m">e0 laki-laki</label><input id="e0m" type="number" step="any" value="73.270"></div>
+    <div><label for="e0f">e0 perempuan</label><input id="e0f" type="number" step="any" value="76.890"></div>
+    <div><label for="p04m">Penduduk 0–4 laki-laki (kota)</label><input id="p04m" type="number" value="12987"></div>
+    <div><label for="p04f">Penduduk 0–4 perempuan (kota)</label><input id="p04f" type="number" value="12400"></div>
+    <div><label for="lomOv">LOM manual (opsional)</label><input id="lomOv" type="number" step="any" placeholder="mis. 23.701"></div>
+  </div>
+  <p class="note">Nilai Coale-Demeny (level 23 dan 24) mengikuti Tabel 2 dan 3 jurnal.</p>
+  <div class="wrap"><table id="cd">
+    <tr><th></th><th>e0 laki-laki</th><th>e0 perempuan</th><th>Px laki-laki</th><th>Px perempuan</th></tr>
+    <tr><td>Level 23</td><td><input data-k="em23" type="number" step="any" value="71.204"></td><td><input data-k="ef23" type="number" step="any" value="75"></td><td><input data-k="pm23" type="number" step="any" value="0.97720"></td><td><input data-k="pf23" type="number" step="any" value="0.98379"></td></tr>
+    <tr><td>Level 24</td><td><input data-k="em24" type="number" step="any" value="73.905"></td><td><input data-k="ef24" type="number" step="any" value="77.5"></td><td><input data-k="pm24" type="number" step="any" value="0.98598"></td><td><input data-k="pf24" type="number" step="any" value="0.99057"></td></tr>
+  </table></div>
+  <div class="kpi" style="margin-top:14px" id="lomOut"></div>
+</section>
+
+<h2>2. Data registrasi per kecamatan</h2>
+<section>
+  
+  <div class="wrap"><table id="inp"></table></div>
+  <div class="row">
+    <button id="add">Tambah kecamatan</button>
+    <button id="reset">Reset data awal</button>
+  </div>
+</section>
+
+<h2>3. Hasil</h2>
+<section>
+  <div class="wrap"><table id="res"></table></div>
+  <div class="row"><button id="csv">Unduh hasil (CSV)</button></div>
+</section>
+
+<h2>4. Perbandingan TFR</h2>
+<section>
+  <div class="bars" id="chart"></div>
+  <div class="legend"><s style="background:var(--direct)"></s>Langsung <s style="background:var(--indirect)"></s>Tidak langsung (LOM) <s style="border-left:2px dashed var(--ref);width:0;height:12px"></s>Replacement level 2,1</div>
+</section>
+
+<h2>Cara hitung</h2>
+<section class="note">
+  <p><b>Langsung.</b> CBR = B / P × 1000, dengan B penduduk umur 0 tahun dan P penduduk pertengahan tahun.</p>
+  <p><b>Tidak langsung.</b> (1) Level tiap jenis kelamin diinterpolasi linear dari e0 terhadap level 23 dan 24, lalu dirata-rata menjadi LOM. (2) Px diinterpolasi pada posisi LOM. (3) Kelahiran = P(0–4) / (5 × Px), memakai rata-rata Px laki-laki dan perempuan. (4) CBR = kelahiran / penduduk × 1000.</p>
+  <p><b>TFR.</b> Rumus Bogue: TFR = 137,94 × CBR − 0,10616, dengan CBR dalam bentuk proporsi (CBR per 1000 ÷ 1000). Rumus ini mereproduksi Tabel 1 jurnal (misalnya CBR 9,61 menjadi TFR 1,22), jadi “±106,16” pada naskah kemungkinan salah ketik.</p>
+  <p><b>Catatan.</b> Data registrasi bersifat de jure; penduduk yang tinggal tanpa KTP tidak terhitung dan sebaliknya, sehingga TFR cenderung rendah. Periksa kualitas data (underreporting) sebelum menafsirkan hasil.</p>
+</section>
+</main>
+
+<script>
+const DEF=[
+["Tegalrejo",2341,37158,9.61],["Jetis",1607,27117,9.15],["Gondokusuman",2423,42522,8.96],
+["Danurejan",1226,21274,17.71],["Gedongtengen",1078,19876,8.30],["Ngampilan",1176,18586,9.90],
+["Wirobrajan",1759,27931,8.81],["Mantrijeron",2112,35388,9.27],["Kraton",1248,21935,8.57],
+["Gondomanan",875,15041,9.37],["Pakualaman",603,10777,7.89],["Mergangsan",1924,32100,9.47],
+["Umbulharjo",4685,69817,10.24],["Kotagede",2330,34081,10.80]
+].map(r=>({name:r[0],p04:r[1],pop:r[2],b0:Math.round(r[3]*r[2]/1000)}));
+let data=JSON.parse(JSON.stringify(DEF));
+const $=id=>document.getElementById(id);
+const num=v=>{const x=parseFloat(v);return isFinite(x)?x:0};
+const f2=(x,d=2)=>isFinite(x)?x.toLocaleString("id-ID",{minimumFractionDigits:d,maximumFractionDigits:d}):"–";
+const bogue=cbr=>0.13794*cbr-0.10616; // cbr per 1000
+
+function cd(){const o={};document.querySelectorAll("#cd input").forEach(i=>o[i.dataset.k]=num(i.value));return o}
+
+function renderInputs(){
+  let h="<tr><th>Kecamatan</th><th>Penduduk 0–4</th><th>Jumlah penduduk</th><th>Penduduk 0 tahun</th><th></th></tr>";
+  data.forEach((r,i)=>{
+    h+=`<tr><td class="name"><input data-i="${i}" data-f="name" value="${r.name}"></td>`+
+    ["p04","pop","b0"].map(f=>`<td><input type="number" data-i="${i}" data-f="${f}" value="${r[f]}"></td>`).join("")+
+    `<td><button data-del="${i}" aria-label="Hapus ${r.name}">Hapus</button></td></tr>`;
+  });
+  $("inp").innerHTML=h;
+}
+
+function calc(){
+  const c=cd(), e0m=num($("e0m").value), e0f=num($("e0f").value);
+  const lm=23+(e0m-c.em23)/(c.em24-c.em23), lf=23+(e0f-c.ef23)/(c.ef24-c.ef23);
+  const auto=(lm+lf)/2, ov=$("lomOv").value.trim();
+  const lom=ov?num(ov):auto, fr=lom-23;
+  const pxm=c.pm23+fr*(c.pm24-c.pm23), pxf=c.pf23+fr*(c.pf24-c.pf23), px=(pxm+pxf)/2;
+  $("lomOut").innerHTML=
+    `<div><b>${f2(lm,3)}</b><span>Level laki-laki</span></div><div><b>${f2(lf,3)}</b><span>Level perempuan</span></div>`+
+    `<div><b>${f2(lom,3)}</b><span>LOM ${ov?"(manual)":"(rata-rata)"}</span></div><div><b>${f2(px,5)}</b><span>Px rata-rata</span></div>`;
+
+  const rows=data.map(r=>{
+    const cbrD=r.pop?r.b0/r.pop*1000:NaN, b=r.p04/(5*px), cbrI=r.pop?b/r.pop*1000:NaN;
+    return {name:r.name,b0:r.b0,cbrD,tfrD:bogue(cbrD),b,cbrI,tfrI:bogue(cbrI)};
+  });
+  const T=data.reduce((a,r)=>({p04:a.p04+r.p04,pop:a.pop+r.pop,b0:a.b0+r.b0}),{p04:0,pop:0,b0:0});
+  const tb=T.p04/(5*px), tcI=T.pop?tb/T.pop*1000:NaN, tcD=T.pop?T.b0/T.pop*1000:NaN;
+
+  const cls=v=>v<2.1?' class="low"':"";
+  let h="<tr><th>Kecamatan</th><th>CBR langsung</th><th>TFR langsung</th><th>Kelahiran (LOM)</th><th>CBR LOM</th><th>TFR LOM</th></tr>";
+  rows.forEach(r=>h+=`<tr><td>${r.name}</td><td>${f2(r.cbrD)}</td><td${cls(r.tfrD)}>${f2(r.tfrD)}</td><td>${f2(r.b)}</td><td>${f2(r.cbrI)}</td><td${cls(r.tfrI)}>${f2(r.tfrI)}</td></tr>`);
+  h+=`<tr class="sum"><td>Kota</td><td>${f2(tcD)}</td><td${cls(bogue(tcD))}>${f2(bogue(tcD))}</td><td>${f2(tb)}</td><td>${f2(tcI)}</td><td${cls(bogue(tcI))}>${f2(bogue(tcI))}</td></tr>`;
+  $("res").innerHTML=h;
+
+  const max=Math.max(2.6,...rows.map(r=>Math.max(r.tfrD||0,r.tfrI||0)));
+  const pct=v=>Math.max(0,Math.min(100,v/max*100))+"%";
+  $("chart").innerHTML=rows.map(r=>`<div class="bar"><span>${r.name}</span><div class="track"><i class="d" style="width:${pct(r.tfrD)}" title="Langsung ${f2(r.tfrD)}"></i><i class="n" style="width:${pct(r.tfrI)}" title="LOM ${f2(r.tfrI)}"></i><div class="refline" style="left:${pct(2.1)}"></div></div></div>`).join("");
+  window._rows=rows;window._tot={tcD,tcI,tb};
+}
+
+document.addEventListener("input",e=>{
+  const t=e.target;
+  if(t.dataset.f){const r=data[t.dataset.i];r[t.dataset.f]=t.dataset.f==="name"?t.value:num(t.value)}
+  calc();
+});
+document.addEventListener("click",e=>{
+  const t=e.target;
+  if(t.dataset.del!==undefined){data.splice(+t.dataset.del,1);renderInputs();calc()}
+});
+$("add").onclick=()=>{data.push({name:"Kecamatan baru",p04:0,pop:0,b0:0});renderInputs();calc()};
+$("reset").onclick=()=>{data=JSON.parse(JSON.stringify(DEF));renderInputs();calc()};
+$("csv").onclick=()=>{
+  const L=["kecamatan,penduduk_0,cbr_langsung,tfr_langsung,kelahiran_lom,cbr_lom,tfr_lom"];
+  window._rows.forEach(r=>L.push([r.name,r.b0,r.cbrD,r.tfrD,r.b,r.cbrI,r.tfrI].map(v=>typeof v==="number"?v.toFixed(4):v).join(",")));
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([L.join("\n")],{type:"text/csv"}));
+  a.download="estimasi-fertilitas.csv";a.click();
+};
+renderInputs();calc();
+</script>
+</body>
+</html>
